@@ -1,3 +1,4 @@
+import time
 from src.config import Config
 from src.wallet_monitor import Position
 
@@ -7,6 +8,25 @@ class TradeExecutor:
         self.config = config
         self.open_positions: dict[str, float] = {}  # market_id -> size_usd
         self.daily_pnl: float = 0.0
+        self._clob_client = None
+
+    def _get_clob_client(self):
+        """Lazy-initialize py-clob-client for live trading."""
+        if self._clob_client is not None:
+            return self._clob_client
+
+        from py_clob_client.client import ClobClient
+
+        self._clob_client = ClobClient(
+            host="https://clob.polymarket.com",
+            chain_id=137,
+            key=self.config.private_key,
+            signature_type=1,  # Poly proxy wallet
+            funder=self.config.funder,
+        )
+        self._clob_client.set_api_creds(self._clob_client.derive_api_key())
+        print("[Executor] CLOB client initialized")
+        return self._clob_client
 
     @property
     def total_exposure(self) -> float:
@@ -17,6 +37,10 @@ class TradeExecutor:
         # Scale down: assume trader has ~10x our capital
         raw_size = trader_position.size / 10.0
         size = min(raw_size, self.config.max_position_usd)
+
+        # Enforce minimum $1 position
+        if size < 1.0:
+            return 0
 
         # Check concurrent position limit
         if len(self.open_positions) >= self.config.max_concurrent_positions:
@@ -39,6 +63,7 @@ class TradeExecutor:
         if self.config.paper_trading:
             print(
                 f"[PAPER] BUY ${size:.2f} on {position.outcome} "
+                f"@ {position.price:.3f} "
                 f"(market {position.market_id[:12]}.. copying {position.trader[:8]}..)"
             )
             self.open_positions[position.market_id] = size
@@ -80,20 +105,100 @@ class TradeExecutor:
             self._execute_live_adjust(position, old_size, new_size)
 
     def _execute_live_buy(self, position: Position, size: float):
-        """Execute a live buy via py-clob-client. Placeholder for MVP."""
-        # TODO: Implement with py-clob-client
-        # from py_clob_client.client import ClobClient
-        # client = ClobClient(host, key=self.config.private_key, chain_id=137)
-        print(f"[LIVE] Would BUY ${size:.2f} on {position.market_id[:12]}.. (not yet implemented)")
-        self.open_positions[position.market_id] = size
+        """Execute a live buy via py-clob-client."""
+        try:
+            from py_clob_client.clob_types import OrderArgs
+
+            client = self._get_clob_client()
+            token_id = position.token_id
+            if not token_id:
+                print(f"[LIVE] No token_id for {position.market_id[:12]}.. skipping")
+                return
+
+            # Clamp price to Polymarket limits
+            price = max(0.01, min(0.99, position.price))
+
+            order_args = OrderArgs(
+                token_id=token_id,
+                price=price,
+                size=size,
+                side="BUY",
+            )
+
+            signed_order = client.create_order(order_args)
+            response = client.post_order(signed_order)
+
+            status = (response.get("status") or "").lower()
+            order_id = response.get("orderID", "?")
+
+            if status in ("filled", "matched", "live"):
+                print(f"[LIVE] BUY ${size:.2f} on {position.outcome} -- order {order_id} {status}")
+                self.open_positions[position.market_id] = size
+            else:
+                print(f"[LIVE] BUY order {order_id} status: {status}")
+
+        except Exception as e:
+            print(f"[LIVE] BUY failed for {position.market_id[:12]}..: {e}")
 
     def _execute_live_sell(self, position: Position, size: float):
-        """Execute a live sell. Placeholder for MVP."""
-        print(f"[LIVE] Would SELL ${size:.2f} on {position.market_id[:12]}.. (not yet implemented)")
+        """Execute a live sell via py-clob-client."""
+        try:
+            from py_clob_client.clob_types import OrderArgs
+
+            client = self._get_clob_client()
+            token_id = position.token_id
+            if not token_id:
+                print(f"[LIVE] No token_id for {position.market_id[:12]}.. skipping")
+                return
+
+            price = max(0.01, min(0.99, position.price))
+
+            order_args = OrderArgs(
+                token_id=token_id,
+                price=price,
+                size=size,
+                side="SELL",
+            )
+
+            signed_order = client.create_order(order_args)
+            response = client.post_order(signed_order)
+
+            status = (response.get("status") or "").lower()
+            order_id = response.get("orderID", "?")
+            print(f"[LIVE] SELL ${size:.2f} on {position.outcome} -- order {order_id} {status}")
+
+        except Exception as e:
+            print(f"[LIVE] SELL failed for {position.market_id[:12]}..: {e}")
 
     def _execute_live_adjust(self, position: Position, old_size: float, new_size: float):
-        """Adjust a live position. Placeholder for MVP."""
-        print(f"[LIVE] Would ADJUST {position.market_id[:12]}.. from ${old_size:.2f} to ${new_size:.2f} (not yet implemented)")
+        """Adjust a live position by placing a delta order."""
+        diff = new_size - old_size
+        if abs(diff) < 1.0:
+            return
+
+        if diff > 0:
+            # Need to buy more
+            adjusted = Position(
+                market_id=position.market_id,
+                token_id=position.token_id,
+                outcome=position.outcome,
+                size=abs(diff) * 10,  # Reverse the /10 scaling
+                price=position.price,
+                trader=position.trader,
+            )
+            self._execute_live_buy(adjusted, abs(diff))
+        else:
+            # Need to sell some
+            adjusted = Position(
+                market_id=position.market_id,
+                token_id=position.token_id,
+                outcome=position.outcome,
+                size=abs(diff) * 10,
+                price=position.price,
+                trader=position.trader,
+            )
+            self._execute_live_sell(adjusted, abs(diff))
+
         self.open_positions[position.market_id] = new_size
 
     def reset_daily_pnl(self):

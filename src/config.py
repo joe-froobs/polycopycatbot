@@ -13,6 +13,7 @@ class Config:
 
     # Wallet
     private_key: str = os.getenv("PRIVATE_KEY", "")
+    funder: str = os.getenv("FUNDER_ADDRESS", "")
     rpc_url: str = os.getenv("RPC_URL", "https://polygon-rpc.com")
 
     # Trading

@@ -45,6 +45,7 @@ All settings are in `.env`:
 | `MANUAL_TRADERS` | (none) | Comma-separated wallet addresses (fallback) |
 | `PAPER_TRADING` | `true` | Set to `false` for live trading |
 | `PRIVATE_KEY` | (none) | Your wallet private key (live trading only) |
+| `FUNDER_ADDRESS` | (none) | Your Polymarket proxy wallet address (live trading only) |
 | `RPC_URL` | `https://polygon-rpc.com` | Polygon RPC endpoint |
 | `MAX_TRADERS` | `5` | How many top traders to copy (1-20) |
 | `POLL_INTERVAL` | `5` | Seconds between polls |
@@ -61,7 +62,7 @@ Paper trading is enabled by default. The bot will:
 - Log what trades it *would* make, with exact sizes
 - Track simulated P&L
 
-When you're comfortable, set `PAPER_TRADING=false` and add your `PRIVATE_KEY` to go live.
+When you're comfortable, set `PAPER_TRADING=false` and add your `PRIVATE_KEY` and `FUNDER_ADDRESS` to go live. Your funder address is the Polymarket proxy wallet linked to your account.
 
 ## Risk Controls
 
