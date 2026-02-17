@@ -11,8 +11,10 @@ Free, open-source copy trading bot for [Polymarket](https://polymarket.com). Mon
 ```bash
 git clone https://github.com/joe-froobs/polycopycatbot.git
 cd polycopycatbot
-pip3 install -r requirements.txt
-python3 -m src.main
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python -m src.main
 ```
 
 The bot opens a local dashboard at **http://localhost:8532** and walks you through setup:
