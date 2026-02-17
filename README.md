@@ -38,9 +38,9 @@ python3 -m src.main --headless
 
 ## Getting an API Key
 
-The bot fetches ranked trader data from the [Poly Copy Cat](https://polycopycatbot.com) leaderboard API.
+The bot fetches ranked trader data from the [Poly Copy Cat](https://poly-copy-cat-z1n9.vercel.app) leaderboard API.
 
-1. Sign up at [polycopycatbot.com](https://polycopycatbot.com)
+1. Sign up at [polycopycatbot.com](https://poly-copy-cat-z1n9.vercel.app)
 2. Subscribe ($49/mo)
 3. Go to Dashboard > API Keys
 4. Generate a key and copy it

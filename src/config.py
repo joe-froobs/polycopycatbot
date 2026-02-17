@@ -23,7 +23,7 @@ _SETTING_MAP = {
 @dataclass
 class Config:
     # API
-    api_url: str = os.getenv("PCC_API_URL", "https://polycopycatbot.com/api/traders")
+    api_url: str = os.getenv("PCC_API_URL", "https://poly-copy-cat-z1n9.vercel.app/api/traders")
     api_key: str = os.getenv("PCC_API_KEY", "")
 
     # Wallet
