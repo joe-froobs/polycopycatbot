@@ -8,9 +8,9 @@ Free, open-source copy trading bot for [Polymarket](https://polymarket.com). Mon
 
 ```bash
 git clone https://github.com/joe-froobs/polycopycatbot.git
-cd poly-copy-cat-bot
-pip install -r requirements.txt
-python -m src.main
+cd polycopycatbot
+pip3 install -r requirements.txt
+python3 -m src.main
 ```
 
 The bot opens a local dashboard at **http://localhost:8532** and walks you through setup:
@@ -29,7 +29,7 @@ If you prefer the original CLI experience without the web dashboard:
 ```bash
 cp .env.example .env
 # Edit .env with your settings
-python -m src.main --headless
+python3 -m src.main --headless
 ```
 
 ## Getting an API Key
