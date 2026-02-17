@@ -1,0 +1,48 @@
+{% if activity %}
+<figure>
+<table>
+    <thead>
+        <tr>
+            <th>Time</th>
+            <th>Event</th>
+            <th>Market</th>
+            <th>Outcome</th>
+            <th>Size</th>
+            <th>Mode</th>
+            <th>Details</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for a in activity %}
+        <tr>
+            <td><small>{{ a.timestamp }}</small></td>
+            <td>
+                {% if a.event_type == "trade_open" %}
+                <mark>OPEN</mark>
+                {% elif a.event_type == "trade_close" %}
+                <ins>CLOSE</ins>
+                {% elif a.event_type == "trade_adjust" %}
+                ADJUST
+                {% elif a.event_type == "bot_start" %}
+                <ins>START</ins>
+                {% elif a.event_type == "bot_stop" %}
+                STOP
+                {% elif a.event_type == "error" %}
+                <del>ERROR</del>
+                {% else %}
+                {{ a.event_type }}
+                {% endif %}
+            </td>
+            <td>{% if a.market_id %}<code>{{ a.market_id[:12] }}...</code>{% endif %}</td>
+            <td>{{ a.outcome }}</td>
+            <td>{% if a.size_usd %} ${{ "%.2f"|format(a.size_usd) }}{% endif %}</td>
+            <td>{{ a.mode }}</td>
+            <td><small>{{ a.details }}</small></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</figure>
+{% else %}
+<p>No activity yet.</p>
+{% endif %}

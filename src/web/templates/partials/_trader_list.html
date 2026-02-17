@@ -1,0 +1,40 @@
+{% if traders %}
+<figure>
+<table>
+    <thead>
+        <tr>
+            <th>Address</th>
+            <th>Label</th>
+            <th>Source</th>
+            <th>Active</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for t in traders %}
+        <tr>
+            <td><code>{{ t.address[:8] }}...{{ t.address[-4:] }}</code></td>
+            <td>{{ t.label }}</td>
+            <td>{{ t.source }}</td>
+            <td>
+                <input type="checkbox" role="switch"
+                       {% if t.active %}checked{% endif %}
+                       hx-post="/api/traders/{{ t.address }}/toggle"
+                       hx-target="#trader-list"
+                       hx-swap="innerHTML">
+            </td>
+            <td>
+                <button class="outline secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;"
+                        hx-delete="/api/traders/{{ t.address }}"
+                        hx-target="#trader-list"
+                        hx-swap="innerHTML"
+                        hx-confirm="Remove this trader?">Remove</button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</figure>
+{% else %}
+<p>No traders configured yet.</p>
+{% endif %}

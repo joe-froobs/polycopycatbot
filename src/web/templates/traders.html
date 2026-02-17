@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Traders — Poly Copy Cat{% endblock %}
+
+{% block content %}
+<h2>Trader Whitelist</h2>
+
+<!-- Add Trader Form -->
+<article>
+    <header><strong>Add Trader</strong></header>
+    <form method="post" action="/api/traders" hx-post="/api/traders" hx-target="#trader-list" hx-swap="innerHTML" hx-on::after-request="this.reset()">
+        <div class="grid">
+            <label>
+                Wallet Address
+                <input type="text" name="address" placeholder="0x..." required>
+            </label>
+            <label>
+                Label (optional)
+                <input type="text" name="label" placeholder="e.g. Top Trader #1">
+            </label>
+        </div>
+        <button type="submit">Add Trader</button>
+    </form>
+    {% if has_api_key %}
+    <form method="post" action="/api/traders/refresh" hx-post="/api/traders/refresh" hx-target="#trader-list" hx-swap="innerHTML">
+        <button type="submit" class="outline">Refresh from API</button>
+    </form>
+    {% endif %}
+</article>
+
+<!-- Trader List -->
+<article>
+    <header><strong>Configured Traders</strong></header>
+    <div id="trader-list">
+        {% include "partials/_trader_list.html" %}
+    </div>
+</article>
+{% endblock %}

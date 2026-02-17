@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block nav %}{% endblock %}
+
+{% block title %}Data Source — Poly Copy Cat{% endblock %}
+
+{% block content %}
+<article>
+    <header>
+        <h2>Choose Your Data Source</h2>
+        <p>Step 2 of 4 — How will you get trader addresses?</p>
+        <progress value="2" max="4"></progress>
+    </header>
+
+    <form method="post" action="/setup/source">
+        <fieldset>
+            <legend><strong>Option A: Poly Copy Cat API Key</strong></legend>
+            <p>Automatically fetches the top-performing trader addresses from our ranked leaderboard.</p>
+            <label for="api_key">API Key</label>
+            <input type="text" id="api_key" name="api_key" placeholder="pcc_your_key_here" value="{{ api_key }}">
+            <small><a href="https://polycopycatbot.com/dashboard/api-keys" target="_blank">Get an API key</a></small>
+        </fieldset>
+
+        <fieldset>
+            <legend><strong>Option B: Manual Trader Addresses</strong></legend>
+            <p>Paste wallet addresses of traders you want to copy (one per line, up to 20).</p>
+            <label for="manual_traders">Wallet Addresses</label>
+            <textarea id="manual_traders" name="manual_traders" rows="5" placeholder="0xabc123...&#10;0xdef456...&#10;0x789ghi...">{{ manual_traders }}</textarea>
+            <small>Find traders on the <a href="https://polymarket.com/leaderboard" target="_blank">Polymarket leaderboard</a></small>
+        </fieldset>
+
+        {% if error %}
+        <p role="alert">{{ error }}</p>
+        {% endif %}
+
+        <div class="grid">
+            <a href="/setup/tos" role="button" class="outline">Back</a>
+            <button type="submit">Continue</button>
+        </div>
+    </form>
+</article>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% if positions %}
+<figure>
+<table>
+    <thead>
+        <tr>
+            <th>Market</th>
+            <th>Outcome</th>
+            <th>Size</th>
+            <th>Entry Price</th>
+            <th>Trader</th>
+            <th>Mode</th>
+            <th>Opened</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in positions %}
+        <tr>
+            <td><code>{{ p.market_id[:12] }}...</code></td>
+            <td>{{ p.outcome }}</td>
+            <td>${{ "%.2f"|format(p.size_usd) }}</td>
+            <td>{{ "%.3f"|format(p.entry_price) }}</td>
+            <td><code>{{ p.trader[:8] }}...</code></td>
+            <td>{{ p.mode }}</td>
+            <td>{{ p.opened_at }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</figure>
+{% else %}
+<p>No open positions.</p>
+{% endif %}

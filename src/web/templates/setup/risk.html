@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block nav %}{% endblock %}
+
+{% block title %}Risk Settings — Poly Copy Cat{% endblock %}
+
+{% block content %}
+<article>
+    <header>
+        <h2>Risk Settings</h2>
+        <p>Step 3 of 4 — Configure your risk controls</p>
+        <progress value="3" max="4"></progress>
+    </header>
+
+    <form method="post" action="/setup/risk">
+        <fieldset>
+            <legend><strong>Trading Mode</strong></legend>
+            <label>
+                <input type="checkbox" name="paper_trading" value="1" role="switch"
+                       {% if paper_trading %}checked{% endif %}>
+                Paper Trading (simulated, no real money)
+            </label>
+        </fieldset>
+
+        <fieldset>
+            <legend><strong>Position Limits</strong></legend>
+            <div class="grid">
+                <label>
+                    Max Position Size ($)
+                    <input type="number" name="max_position_usd" value="{{ max_position_usd }}" min="1" max="10000" step="1">
+                </label>
+                <label>
+                    Max Concurrent Positions
+                    <input type="number" name="max_concurrent_positions" value="{{ max_concurrent_positions }}" min="1" max="100" step="1">
+                </label>
+            </div>
+            <div class="grid">
+                <label>
+                    Daily Loss Limit ($)
+                    <input type="number" name="daily_loss_limit_usd" value="{{ daily_loss_limit_usd }}" min="1" max="10000" step="1">
+                </label>
+                <label>
+                    Poll Interval (seconds)
+                    <input type="number" name="poll_interval" value="{{ poll_interval }}" min="2" max="60" step="1">
+                </label>
+            </div>
+            <label>
+                Max Traders to Copy
+                <input type="number" name="max_traders" value="{{ max_traders }}" min="1" max="20" step="1">
+            </label>
+        </fieldset>
+
+        <details>
+            <summary>Live Trading Settings (advanced)</summary>
+            <fieldset>
+                <label>
+                    Private Key
+                    <input type="password" name="private_key" value="{{ private_key }}" placeholder="Your wallet private key">
+                </label>
+                <label>
+                    Funder Address
+                    <input type="text" name="funder" value="{{ funder }}" placeholder="Your Polymarket proxy wallet address">
+                </label>
+                <label>
+                    RPC URL
+                    <input type="text" name="rpc_url" value="{{ rpc_url }}" placeholder="https://polygon-rpc.com">
+                </label>
+            </fieldset>
+        </details>
+
+        <div class="grid">
+            <a href="/setup/source" role="button" class="outline">Back</a>
+            <button type="submit">Continue</button>
+        </div>
+    </form>
+</article>
+{% endblock %}

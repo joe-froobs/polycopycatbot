@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block nav %}{% endblock %}
+
+{% block title %}Terms of Service — Poly Copy Cat{% endblock %}
+
+{% block content %}
+<article>
+    <header>
+        <h2>Welcome to Poly Copy Cat</h2>
+        <p>Step 1 of 4 — Terms of Service</p>
+        <progress value="1" max="4"></progress>
+    </header>
+
+    <div>
+        <h4>Disclaimer & Terms</h4>
+        <p>Please read and accept the following before using this software:</p>
+
+        <blockquote>
+            <ul>
+                <li><strong>Not financial advice.</strong> This software is for educational and informational purposes only. Nothing in this bot constitutes financial, investment, or trading advice.</li>
+                <li><strong>Risk of loss.</strong> Trading on prediction markets involves substantial risk. You may lose some or all of your funds. Past performance of copied traders does not guarantee future results.</li>
+                <li><strong>Your responsibility.</strong> You are solely responsible for all trading decisions made by this bot on your behalf. The authors and contributors are not liable for any financial losses.</li>
+                <li><strong>No guarantees.</strong> The bot may malfunction, APIs may change, and traders you copy may make poor decisions. Use at your own risk.</li>
+                <li><strong>Paper trading first.</strong> We strongly recommend running in paper trading mode before risking real funds.</li>
+            </ul>
+        </blockquote>
+    </div>
+
+    <form method="post" action="/setup/tos">
+        <label>
+            <input type="checkbox" name="accept" value="1" required>
+            I understand and accept these terms. I acknowledge the risks involved.
+        </label>
+        <button type="submit">Continue</button>
+    </form>
+</article>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Settings — Poly Copy Cat{% endblock %}
+
+{% block content %}
+<h2>Settings</h2>
+
+{% if saved %}
+<article role="alert">Settings saved. {% if was_running %}Bot restarted with new settings.{% endif %}</article>
+{% endif %}
+
+<form method="post" action="/settings">
+    <article>
+        <header><strong>API</strong></header>
+        <label>
+            API Key
+            <input type="password" name="api_key" value="{{ config.api_key }}" placeholder="pcc_your_key_here">
+        </label>
+    </article>
+
+    <article>
+        <header><strong>Trading Mode</strong></header>
+        <label>
+            <input type="checkbox" name="paper_trading" value="1" role="switch"
+                   {% if config.paper_trading %}checked{% endif %}>
+            Paper Trading (simulated, no real money)
+        </label>
+    </article>
+
+    <article>
+        <header><strong>Risk Controls</strong></header>
+        <div class="grid">
+            <label>
+                Max Position Size ($)
+                <input type="number" name="max_position_usd" value="{{ config.max_position_usd|int }}" min="1" max="10000">
+            </label>
+            <label>
+                Max Concurrent Positions
+                <input type="number" name="max_concurrent_positions" value="{{ config.max_concurrent_positions }}" min="1" max="100">
+            </label>
+        </div>
+        <div class="grid">
+            <label>
+                Daily Loss Limit ($)
+                <input type="number" name="daily_loss_limit_usd" value="{{ config.daily_loss_limit_usd|int }}" min="1" max="10000">
+            </label>
+            <label>
+                Poll Interval (seconds)
+                <input type="number" name="poll_interval" value="{{ config.poll_interval }}" min="2" max="60">
+            </label>
+        </div>
+        <label>
+            Max Traders
+            <input type="number" name="max_traders" value="{{ config.max_traders }}" min="1" max="20">
+        </label>
+    </article>
+
+    <details>
+        <summary>Live Trading Settings (advanced)</summary>
+        <article>
+            <label>
+                Private Key
+                <input type="password" name="private_key" value="{{ config.private_key }}" placeholder="Your wallet private key">
+            </label>
+            <label>
+                Funder Address
+                <input type="text" name="funder" value="{{ config.funder }}" placeholder="Polymarket proxy wallet address">
+            </label>
+            <label>
+                RPC URL
+                <input type="text" name="rpc_url" value="{{ config.rpc_url }}">
+            </label>
+        </article>
+    </details>
+
+    <button type="submit">Save Settings</button>
+</form>
+{% endblock %}

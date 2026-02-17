@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Poly Copy Cat{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body>
+    {% block nav %}
+    <nav class="container-fluid">
+        <ul>
+            <li><strong>Poly Copy Cat</strong></li>
+        </ul>
+        <ul>
+            <li><a href="/" {% if active == "dashboard" %}aria-current="page"{% endif %}>Dashboard</a></li>
+            <li><a href="/traders" {% if active == "traders" %}aria-current="page"{% endif %}>Traders</a></li>
+            <li><a href="/settings" {% if active == "settings" %}aria-current="page"{% endif %}>Settings</a></li>
+        </ul>
+    </nav>
+    {% endblock %}
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="container">
+        <small>Poly Copy Cat &mdash; Local dashboard. All data stays on your machine.</small>
+    </footer>
+</body>
+</html>

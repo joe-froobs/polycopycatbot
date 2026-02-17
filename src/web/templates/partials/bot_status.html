@@ -1,0 +1,25 @@
+<article>
+    <div class="grid">
+        <div>
+            <strong>Bot Status:</strong>
+            {% if stats.status == "running" %}
+            <mark>Running</mark>
+            {% else %}
+            <span class="badge-stopped">Stopped</span>
+            {% endif %}
+            &nbsp; | &nbsp;
+            <strong>Mode:</strong> {{ stats.mode | title }}
+            {% if stats.last_error %}
+            &nbsp; | &nbsp;
+            <small><del>Last error: {{ stats.last_error }}</del></small>
+            {% endif %}
+        </div>
+        <div style="text-align: right;">
+            {% if stats.status == "running" %}
+            <button hx-post="/api/bot/stop" hx-target="closest article" hx-swap="outerHTML" class="outline secondary">Stop Bot</button>
+            {% else %}
+            <button hx-post="/api/bot/start" hx-target="closest article" hx-swap="outerHTML">Start Bot</button>
+            {% endif %}
+        </div>
+    </div>
+</article>

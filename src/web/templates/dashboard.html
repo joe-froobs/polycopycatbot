@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — Poly Copy Cat{% endblock %}
+
+{% block content %}
+<h2>Dashboard</h2>
+
+<!-- Bot Status -->
+<div hx-get="/htmx/bot-status" hx-trigger="load, every 5s" hx-swap="innerHTML">
+    <article aria-busy="true">Loading bot status...</article>
+</div>
+
+<!-- Stats Row -->
+<div class="grid">
+    <article>
+        <header>Open Positions</header>
+        <h3 id="stat-open">{{ stats.open_count }}</h3>
+    </article>
+    <article>
+        <header>Total Exposure</header>
+        <h3 id="stat-exposure">${{ "%.2f"|format(stats.exposure) }}</h3>
+    </article>
+    <article>
+        <header>Daily PnL</header>
+        <h3 id="stat-pnl">${{ "%.2f"|format(stats.daily_pnl) }}</h3>
+    </article>
+    <article>
+        <header>Traders Monitored</header>
+        <h3 id="stat-traders">{{ stats.traders_monitored }}</h3>
+    </article>
+</div>
+
+<!-- Positions -->
+<article>
+    <header><strong>Open Positions</strong></header>
+    <div hx-get="/htmx/positions" hx-trigger="load, every 5s" hx-swap="innerHTML">
+        <p aria-busy="true">Loading positions...</p>
+    </div>
+</article>
+
+<!-- Activity Log -->
+<article>
+    <header><strong>Recent Activity</strong></header>
+    <div hx-get="/htmx/activity" hx-trigger="load, every 5s" hx-swap="innerHTML">
+        <p aria-busy="true">Loading activity...</p>
+    </div>
+</article>
+{% endblock %}

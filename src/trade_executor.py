@@ -1,14 +1,17 @@
 import time
+from typing import Callable
+
 from src.config import Config
 from src.wallet_monitor import Position
 
 
 class TradeExecutor:
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, on_activity: Callable | None = None):
         self.config = config
         self.open_positions: dict[str, float] = {}  # market_id -> size_usd
         self.daily_pnl: float = 0.0
         self._clob_client = None
+        self._on_activity = on_activity
 
     def _get_clob_client(self):
         """Lazy-initialize py-clob-client for live trading."""

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block nav %}{% endblock %}
+
+{% block title %}Setup Complete — Poly Copy Cat{% endblock %}
+
+{% block content %}
+<article>
+    <header>
+        <h2>You're All Set!</h2>
+        <p>Step 4 of 4 — Setup complete</p>
+        <progress value="4" max="4"></progress>
+    </header>
+
+    <div>
+        <h4>Summary</h4>
+        <table>
+            <tbody>
+                <tr>
+                    <th>Mode</th>
+                    <td>{{ "Paper Trading" if paper_trading else "Live Trading" }}</td>
+                </tr>
+                <tr>
+                    <th>Data Source</th>
+                    <td>{{ "API Key" if api_key else "Manual Addresses" }}</td>
+                </tr>
+                <tr>
+                    <th>Traders</th>
+                    <td>{{ trader_count }} configured</td>
+                </tr>
+                <tr>
+                    <th>Max Position</th>
+                    <td>${{ max_position_usd }}</td>
+                </tr>
+                <tr>
+                    <th>Max Concurrent</th>
+                    <td>{{ max_concurrent_positions }}</td>
+                </tr>
+                <tr>
+                    <th>Daily Loss Limit</th>
+                    <td>${{ daily_loss_limit_usd }}</td>
+                </tr>
+                <tr>
+                    <th>Poll Interval</th>
+                    <td>{{ poll_interval }}s</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <form method="post" action="/setup/done">
+        <button type="submit">Launch Dashboard</button>
+    </form>
+</article>
+{% endblock %}
