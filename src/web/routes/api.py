@@ -103,7 +103,7 @@ async def refresh_traders(request: Request):
 async def get_settings():
     config = await Config.from_db()
     return JSONResponse({
-        "api_key": config.api_key[:8] + "..." if len(config.api_key) > 8 else config.api_key,
+        "api_key": f"...{config.api_key[-4:]}" if len(config.api_key) > 4 else "****",
         "paper_trading": config.paper_trading,
         "max_position_usd": config.max_position_usd,
         "max_concurrent_positions": config.max_concurrent_positions,

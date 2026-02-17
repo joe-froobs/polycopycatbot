@@ -50,6 +50,10 @@ CREATE TABLE IF NOT EXISTS onboarding (
     setup_complete  INTEGER DEFAULT 0,
     completed_at    TEXT
 );
+
+CREATE INDEX IF NOT EXISTS idx_activity_log_timestamp ON activity_log(id DESC);
+CREATE INDEX IF NOT EXISTS idx_positions_opened_at ON positions(opened_at DESC);
+CREATE INDEX IF NOT EXISTS idx_traders_active ON traders(active);
 """
 
 

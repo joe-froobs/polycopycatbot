@@ -1,10 +1,19 @@
+import re
+
 from fastapi import APIRouter, Request, Form
 from fastapi.responses import RedirectResponse
 
 from src import db
 from src.config import Config
+from src.web.routes.settings import _validate_settings
 
 router = APIRouter(prefix="/setup", tags=["setup"])
+
+_ETH_ADDR_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")
+
+
+def _is_valid_eth_address(addr: str) -> bool:
+    return bool(_ETH_ADDR_RE.match(addr))
 
 
 @router.get("/tos")
@@ -47,29 +56,43 @@ async def source_save(
     manual_traders: str = Form(""),
 ):
     api_key = api_key.strip()
-    addresses = [
+    raw_addresses = [
         line.strip()
         for line in manual_traders.strip().splitlines()
         if line.strip()
     ]
 
-    if not api_key and not addresses:
+    # Validate Ethereum addresses
+    valid_addresses = []
+    skipped = 0
+    for addr in raw_addresses:
+        if _is_valid_eth_address(addr):
+            valid_addresses.append(addr)
+        else:
+            skipped += 1
+
+    if not api_key and not valid_addresses:
+        error = "Please enter an API key or at least one valid trader address."
+        if skipped:
+            error = f"{skipped} invalid address(es) skipped. {error}"
         return request.app.state.templates.TemplateResponse(
             "setup/source.html",
             {
                 "request": request,
                 "api_key": api_key,
                 "manual_traders": manual_traders,
-                "error": "Please enter an API key or at least one trader address.",
+                "error": error,
             },
         )
+
+    warning = f" ({skipped} invalid address(es) skipped)" if skipped else ""
 
     # Save API key
     if api_key:
         await db.set_setting("api_key", api_key)
 
-    # Save manual traders
-    for addr in addresses[:20]:
+    # Save valid manual traders
+    for addr in valid_addresses[:20]:
         await db.add_trader(addr, source="manual")
 
     return RedirectResponse(url="/setup/risk", status_code=303)
@@ -112,6 +135,30 @@ async def risk_save(
     funder: str = Form(""),
     rpc_url: str = Form("https://polygon-rpc.com"),
 ):
+    # Validate numeric inputs
+    validation_errors = _validate_settings(
+        max_position_usd, max_concurrent_positions,
+        daily_loss_limit_usd, poll_interval, max_traders,
+    )
+    if validation_errors:
+        config = await Config.from_db()
+        return request.app.state.templates.TemplateResponse(
+            "setup/risk.html",
+            {
+                "request": request,
+                "paper_trading": paper_trading == "1",
+                "max_position_usd": max_position_usd,
+                "max_concurrent_positions": max_concurrent_positions,
+                "daily_loss_limit_usd": daily_loss_limit_usd,
+                "poll_interval": poll_interval,
+                "max_traders": max_traders,
+                "private_key": private_key,
+                "funder": funder,
+                "rpc_url": rpc_url,
+                "error": "; ".join(validation_errors),
+            },
+        )
+
     settings = {
         "paper_trading": "true" if paper_trading == "1" else "false",
         "max_position_usd": max_position_usd,

@@ -108,10 +108,27 @@ class BotRunner:
             self.last_error = str(e)
             await db.log_activity(event_type="error", details=f"Baseline scan failed: {e}")
 
+        refresh_interval = 720  # ~hourly at 5s poll interval
+
         while self._running:
             try:
                 await asyncio.sleep(self.config.poll_interval)
                 self.poll_count += 1
+
+                # Periodic trader refresh from API
+                if (self.poll_count % refresh_interval == 0
+                        and self.config.api_key and self.api):
+                    try:
+                        fetched = await asyncio.to_thread(self.api.get_trader_addresses)
+                        if fetched:
+                            self.addresses = fetched
+                            for addr in fetched:
+                                await db.add_trader(addr, source="api")
+                    except Exception as e:
+                        await db.log_activity(
+                            event_type="error",
+                            details=f"Trader refresh failed: {e}",
+                        )
 
                 new, closed, adjusted = await asyncio.to_thread(
                     self.monitor.detect_changes, self.addresses
@@ -119,12 +136,14 @@ class BotRunner:
 
                 for pos in new:
                     self.executor.open_position(pos)
+                    pos_data = self.executor.open_positions.get(pos.market_id, {})
+                    size_usd = pos_data.get("size", 0) if isinstance(pos_data, dict) else 0
                     await db.log_activity(
                         event_type="trade_open",
                         market_id=pos.market_id,
                         trader=pos.trader,
                         outcome=pos.outcome,
-                        size_usd=self.executor.open_positions.get(pos.market_id, 0),
+                        size_usd=size_usd,
                         price=pos.price,
                         mode=self.mode,
                     )
@@ -132,7 +151,7 @@ class BotRunner:
                         market_id=pos.market_id,
                         token_id=pos.token_id,
                         outcome=pos.outcome,
-                        size_usd=self.executor.open_positions.get(pos.market_id, 0),
+                        size_usd=size_usd,
                         entry_price=pos.price,
                         trader=pos.trader,
                         mode=self.mode,
@@ -151,12 +170,14 @@ class BotRunner:
 
                 for pos in adjusted:
                     self.executor.adjust_position(pos)
+                    pos_data = self.executor.open_positions.get(pos.market_id, {})
+                    size_usd = pos_data.get("size", 0) if isinstance(pos_data, dict) else 0
                     await db.log_activity(
                         event_type="trade_adjust",
                         market_id=pos.market_id,
                         trader=pos.trader,
                         outcome=pos.outcome,
-                        size_usd=self.executor.open_positions.get(pos.market_id, 0),
+                        size_usd=size_usd,
                         price=pos.price,
                         mode=self.mode,
                     )
@@ -164,7 +185,7 @@ class BotRunner:
                         market_id=pos.market_id,
                         token_id=pos.token_id,
                         outcome=pos.outcome,
-                        size_usd=self.executor.open_positions.get(pos.market_id, 0),
+                        size_usd=size_usd,
                         entry_price=pos.price,
                         trader=pos.trader,
                         mode=self.mode,

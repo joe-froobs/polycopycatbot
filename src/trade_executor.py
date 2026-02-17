@@ -1,4 +1,5 @@
 import time
+from datetime import date
 from typing import Callable
 
 from src.config import Config
@@ -8,8 +9,9 @@ from src.wallet_monitor import Position
 class TradeExecutor:
     def __init__(self, config: Config, on_activity: Callable | None = None):
         self.config = config
-        self.open_positions: dict[str, float] = {}  # market_id -> size_usd
+        self.open_positions: dict[str, dict] = {}  # market_id -> {"size": float, "entry_price": float}
         self.daily_pnl: float = 0.0
+        self._last_reset_date: date = date.today()
         self._clob_client = None
         self._on_activity = on_activity
 
@@ -33,12 +35,18 @@ class TradeExecutor:
 
     @property
     def total_exposure(self) -> float:
-        return sum(self.open_positions.values())
+        return sum(p["size"] for p in self.open_positions.values())
 
     def calculate_size(self, trader_position: Position) -> float:
         """Calculate position size proportional to trader's size, capped by risk limits."""
-        # Scale down: assume trader has ~10x our capital
-        raw_size = trader_position.size / 10.0
+        # Auto-reset daily P&L at start of new day
+        today = date.today()
+        if today != self._last_reset_date:
+            self.reset_daily_pnl()
+            self._last_reset_date = today
+
+        # Scale down by capital ratio
+        raw_size = trader_position.size / self.config.capital_ratio
         size = min(raw_size, self.config.max_position_usd)
 
         # Enforce minimum $1 position
@@ -69,7 +77,7 @@ class TradeExecutor:
                 f"@ {position.price:.3f} "
                 f"(market {position.market_id[:12]}.. copying {position.trader[:8]}..)"
             )
-            self.open_positions[position.market_id] = size
+            self.open_positions[position.market_id] = {"size": size, "entry_price": position.price}
         else:
             self._execute_live_buy(position, size)
 
@@ -78,7 +86,14 @@ class TradeExecutor:
         if position.market_id not in self.open_positions:
             return
 
-        size = self.open_positions.pop(position.market_id, 0)
+        pos_data = self.open_positions.pop(position.market_id, {})
+        size = pos_data.get("size", 0)
+        entry_price = pos_data.get("entry_price", 0)
+
+        # Calculate P&L
+        if entry_price > 0:
+            pnl = size * (position.price / entry_price - 1)
+            self.daily_pnl += pnl
 
         if self.config.paper_trading:
             print(
@@ -91,7 +106,8 @@ class TradeExecutor:
     def adjust_position(self, position: Position):
         """Adjust an existing position."""
         new_size = self.calculate_size(position)
-        old_size = self.open_positions.get(position.market_id, 0)
+        pos_data = self.open_positions.get(position.market_id, {})
+        old_size = pos_data.get("size", 0)
 
         if new_size <= 0:
             return
@@ -103,7 +119,7 @@ class TradeExecutor:
                 f"[PAPER] {action} ${abs(diff):.2f} on {position.outcome} "
                 f"(market {position.market_id[:12]}.. now ${new_size:.2f})"
             )
-            self.open_positions[position.market_id] = new_size
+            self.open_positions[position.market_id] = {"size": new_size, "entry_price": position.price}
         else:
             self._execute_live_adjust(position, old_size, new_size)
 
@@ -136,7 +152,7 @@ class TradeExecutor:
 
             if status in ("filled", "matched", "live"):
                 print(f"[LIVE] BUY ${size:.2f} on {position.outcome} -- order {order_id} {status}")
-                self.open_positions[position.market_id] = size
+                self.open_positions[position.market_id] = {"size": size, "entry_price": position.price}
             else:
                 print(f"[LIVE] BUY order {order_id} status: {status}")
 
@@ -179,30 +195,21 @@ class TradeExecutor:
         if abs(diff) < 1.0:
             return
 
+        adjusted = Position(
+            market_id=position.market_id,
+            token_id=position.token_id,
+            outcome=position.outcome,
+            size=abs(diff),
+            price=position.price,
+            trader=position.trader,
+        )
+
         if diff > 0:
-            # Need to buy more
-            adjusted = Position(
-                market_id=position.market_id,
-                token_id=position.token_id,
-                outcome=position.outcome,
-                size=abs(diff) * 10,  # Reverse the /10 scaling
-                price=position.price,
-                trader=position.trader,
-            )
             self._execute_live_buy(adjusted, abs(diff))
         else:
-            # Need to sell some
-            adjusted = Position(
-                market_id=position.market_id,
-                token_id=position.token_id,
-                outcome=position.outcome,
-                size=abs(diff) * 10,
-                price=position.price,
-                trader=position.trader,
-            )
             self._execute_live_sell(adjusted, abs(diff))
 
-        self.open_positions[position.market_id] = new_size
+        self.open_positions[position.market_id] = {"size": new_size, "entry_price": position.price}
 
     def reset_daily_pnl(self):
         self.daily_pnl = 0.0

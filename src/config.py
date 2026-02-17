@@ -17,6 +17,7 @@ _SETTING_MAP = {
     "max_position_usd": ("max_position_usd", float),
     "max_concurrent_positions": ("max_concurrent_positions", int),
     "daily_loss_limit_usd": ("daily_loss_limit_usd", float),
+    "capital_ratio": ("capital_ratio", float),
 }
 
 
@@ -40,6 +41,7 @@ class Config:
     max_position_usd: float = float(os.getenv("MAX_POSITION_USD", "50"))
     max_concurrent_positions: int = int(os.getenv("MAX_CONCURRENT_POSITIONS", "10"))
     daily_loss_limit_usd: float = float(os.getenv("DAILY_LOSS_LIMIT_USD", "100"))
+    capital_ratio: float = float(os.getenv("CAPITAL_RATIO", "10.0"))
 
     # Manual trader addresses (comma-separated, fallback if no API key)
     manual_traders: list[str] = field(default_factory=list)
@@ -55,6 +57,18 @@ class Config:
             errors.append("Set PCC_API_KEY or MANUAL_TRADERS in .env")
         if not self.paper_trading and not self.private_key:
             errors.append("PRIVATE_KEY required for live trading")
+        if self.poll_interval < 1:
+            errors.append("poll_interval must be >= 1")
+        if self.max_position_usd <= 0:
+            errors.append("max_position_usd must be > 0")
+        if self.max_concurrent_positions < 1:
+            errors.append("max_concurrent_positions must be >= 1")
+        if self.daily_loss_limit_usd <= 0:
+            errors.append("daily_loss_limit_usd must be > 0")
+        if self.max_traders < 1 or self.max_traders > 20:
+            errors.append("max_traders must be between 1 and 20")
+        if self.capital_ratio < 1.0:
+            errors.append("capital_ratio must be >= 1.0")
         return errors
 
     @classmethod
@@ -71,9 +85,15 @@ class Config:
                 if typ == "bool":
                     setattr(config, field_name, raw.lower() in ("true", "1", "yes"))
                 elif typ is int:
-                    setattr(config, field_name, int(raw))
+                    try:
+                        setattr(config, field_name, int(raw))
+                    except (ValueError, TypeError):
+                        pass  # keep default
                 elif typ is float:
-                    setattr(config, field_name, float(raw))
+                    try:
+                        setattr(config, field_name, float(raw))
+                    except (ValueError, TypeError):
+                        pass  # keep default
                 else:
                     setattr(config, field_name, raw)
 

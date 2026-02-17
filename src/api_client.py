@@ -1,3 +1,5 @@
+import time
+
 import httpx
 from src.config import Config
 
@@ -12,27 +14,38 @@ class ApiClient:
         if not self.config.api_key:
             return []
 
-        resp = self.client.get(
-            self.config.api_url,
-            headers={"Authorization": f"Bearer {self.config.api_key}"},
-        )
+        max_retries = 3
+        backoff = 2  # seconds
 
-        if resp.status_code == 401:
-            print("[API] Invalid API key. Check PCC_API_KEY in .env")
-            return []
-        if resp.status_code == 429:
-            print("[API] Rate limited. Waiting before retry.")
-            return []
-        if resp.status_code != 200:
-            print(f"[API] Unexpected status {resp.status_code}")
-            return []
+        for attempt in range(max_retries):
+            resp = self.client.get(
+                self.config.api_url,
+                headers={"Authorization": f"Bearer {self.config.api_key}"},
+            )
 
-        traders = resp.json()
-        if not isinstance(traders, list):
-            print("[API] Unexpected response format")
-            return []
+            if resp.status_code == 401:
+                print("[API] Invalid API key. Check PCC_API_KEY in .env")
+                return []
 
-        return traders[: self.config.max_traders]
+            if resp.status_code == 429 or resp.status_code >= 500:
+                wait = backoff * (2 ** attempt)
+                print(f"[API] Status {resp.status_code}, retrying in {wait}s (attempt {attempt + 1}/{max_retries})")
+                time.sleep(wait)
+                continue
+
+            if resp.status_code != 200:
+                print(f"[API] Unexpected status {resp.status_code}")
+                return []
+
+            traders = resp.json()
+            if not isinstance(traders, list):
+                print("[API] Unexpected response format")
+                return []
+
+            return traders[: self.config.max_traders]
+
+        print("[API] All retries exhausted")
+        return []
 
     def get_trader_addresses(self) -> list[str]:
         """Get trader addresses from API or manual config."""
