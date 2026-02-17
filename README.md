@@ -6,6 +6,8 @@ Free, open-source copy trading bot for [Polymarket](https://polymarket.com). Mon
 
 ## Quick Start
 
+**Requires Python 3.11+.** Check with `python3 --version`. If you need to install it, use [python.org](https://www.python.org/downloads/) or `brew install python@3.12` on macOS.
+
 ```bash
 git clone https://github.com/joe-froobs/polycopycatbot.git
 cd polycopycatbot
