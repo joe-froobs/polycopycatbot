@@ -1,3 +1,4 @@
+import os
 import sys
 import asyncio
 import webbrowser
@@ -8,7 +9,7 @@ from src import db
 from src.bot_runner import BotRunner
 from src.web.app import create_app
 
-PORT = 8532
+PORT = int(os.getenv("PORT", "8532"))
 
 
 def main():
@@ -33,18 +34,19 @@ def _run_dashboard():
 
         config = uvicorn.Config(
             app,
-            host="127.0.0.1",
+            host="0.0.0.0",
             port=PORT,
             log_level="info",
         )
         server = uvicorn.Server(config)
 
-        # Open browser after a short delay
-        async def open_browser():
-            await asyncio.sleep(1.0)
-            webbrowser.open(f"http://localhost:{PORT}")
+        # Open browser after a short delay (skip in cloud environments)
+        if not os.getenv("RAILWAY_ENVIRONMENT"):
+            async def open_browser():
+                await asyncio.sleep(1.0)
+                webbrowser.open(f"http://localhost:{PORT}")
 
-        asyncio.create_task(open_browser())
+            asyncio.create_task(open_browser())
 
         try:
             await server.serve()

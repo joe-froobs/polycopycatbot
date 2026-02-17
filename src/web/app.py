@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -26,11 +26,12 @@ def create_app(bot: BotRunner) -> FastAPI:
     @app.middleware("http")
     async def onboarding_guard(request: Request, call_next):
         path = request.url.path
-        # Allow setup routes, static files, and API status through
+        # Allow setup routes, static files, health check, and API status through
         if (
             path.startswith("/setup")
             or path.startswith("/static")
             or path == "/favicon.ico"
+            or path == "/health"
         ):
             return await call_next(request)
 
@@ -39,6 +40,10 @@ def create_app(bot: BotRunner) -> FastAPI:
             return RedirectResponse(url="/setup/tos", status_code=303)
 
         return await call_next(request)
+
+    @app.get("/health")
+    async def health_check():
+        return JSONResponse({"status": "ok"})
 
     # Register route modules
     from src.web.routes import setup, dashboard, traders, settings, api

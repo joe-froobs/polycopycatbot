@@ -4,7 +4,20 @@ Free, open-source copy trading bot for [Polymarket](https://polymarket.com). Mon
 
 **Paper trading is on by default.** The bot logs what it would trade without risking real money until you opt in.
 
-## Quick Start
+## Deploy on Railway (Easiest)
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/template/new?repo=joe-froobs/polycopycatbot)
+
+One click, no install required. Works from your phone. Railway gives you a free trial — no credit card needed to start.
+
+1. Click the button above
+2. Set your `PCC_API_KEY` (or leave blank and add manual trader addresses after deploy)
+3. Click **Deploy**
+4. Open the provided URL and complete the setup wizard
+
+> **Note:** Railway's filesystem resets on each redeploy. Your settings will need to be re-entered after redeploying (~60 seconds via the setup wizard).
+
+## Quick Start (Local)
 
 **Requires Python 3.11+.** Check with `python3 --version`. If you need to install it, use [python.org](https://www.python.org/downloads/) or `brew install python@3.12` on macOS.
 
@@ -109,9 +122,18 @@ When you're comfortable, switch to live trading in the dashboard settings (or se
 4. Mirrors those changes on your wallet (or logs them in paper mode)
 5. All activity is logged to a local SQLite database and visible in the dashboard
 
+## Docker
+
+```bash
+docker build -t pcc-bot .
+docker run -p 8532:8532 pcc-bot
+```
+
+Then visit http://localhost:8532 to complete setup.
+
 ## Requirements
 
-- Python 3.11+
+- Python 3.11+ (local install) or Docker
 - A Polygon wallet with USDC (for live trading)
 - A Poly Copy Cat API key (or manual trader addresses)
 
