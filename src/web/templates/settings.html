@@ -28,11 +28,28 @@
     </article>
 
     <article>
+        <header><strong>Capital & Sizing</strong></header>
+        <p><small>Set your USDC account balance so position sizes scale proportionally. If blank, the static "Max Position Size" cap is used instead.</small></p>
+        <div class="grid">
+            <label>
+                Account Balance ($)
+                <input type="number" name="account_balance_usd" value="{{ config.account_balance_usd|int }}" min="0" step="1" placeholder="e.g. 5000">
+            </label>
+            <label>
+                Max Position % of Balance
+                <input type="number" name="max_position_pct" value="{{ (config.max_position_pct * 100)|round(1) }}" min="1" max="50" step="0.5">
+                <small>% per trade (default 5%)</small>
+            </label>
+        </div>
+    </article>
+
+    <article>
         <header><strong>Risk Controls</strong></header>
         <div class="grid">
             <label>
                 Max Position Size ($)
-                <input type="number" name="max_position_usd" value="{{ config.max_position_usd|int }}" min="1" max="10000">
+                <input type="number" name="max_position_usd" value="{{ config.max_position_usd|int }}" min="1" max="100000">
+                <small>Fallback cap when account balance is not set</small>
             </label>
             <label>
                 Max Concurrent Positions
@@ -42,7 +59,7 @@
         <div class="grid">
             <label>
                 Daily Loss Limit ($)
-                <input type="number" name="daily_loss_limit_usd" value="{{ config.daily_loss_limit_usd|int }}" min="1" max="10000">
+                <input type="number" name="daily_loss_limit_usd" value="{{ config.daily_loss_limit_usd|int }}" min="1" max="100000">
             </label>
             <label>
                 Poll Interval (seconds)

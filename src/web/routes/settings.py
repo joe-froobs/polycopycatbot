@@ -74,6 +74,8 @@ async def settings_save(
     request: Request,
     api_key: str = Form(""),
     paper_trading: str = Form(None),
+    account_balance_usd: str = Form("0"),
+    max_position_pct: str = Form("5"),
     max_position_usd: str = Form("50"),
     max_concurrent_positions: str = Form("10"),
     daily_loss_limit_usd: str = Form("100"),
@@ -105,9 +107,17 @@ async def settings_save(
             },
         )
 
+    # Convert percentage input (e.g. "5") to decimal (0.05)
+    try:
+        pct_decimal = str(float(max_position_pct) / 100.0)
+    except (ValueError, TypeError):
+        pct_decimal = "0.05"
+
     settings = {
         "api_key": api_key.strip(),
         "paper_trading": "true" if paper_trading == "1" else "false",
+        "account_balance_usd": account_balance_usd,
+        "max_position_pct": pct_decimal,
         "max_position_usd": max_position_usd,
         "max_concurrent_positions": max_concurrent_positions,
         "daily_loss_limit_usd": daily_loss_limit_usd,

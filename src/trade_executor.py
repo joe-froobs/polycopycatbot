@@ -47,7 +47,13 @@ class TradeExecutor:
 
         # Scale down by capital ratio
         raw_size = trader_position.size / self.config.capital_ratio
-        size = min(raw_size, self.config.max_position_usd)
+
+        # Dynamic max: percentage of account balance if set, else static cap
+        if self.config.account_balance_usd > 0:
+            max_size = self.config.account_balance_usd * self.config.max_position_pct
+        else:
+            max_size = self.config.max_position_usd
+        size = min(raw_size, max_size)
 
         # Enforce minimum $1 position
         if size < 1.0:

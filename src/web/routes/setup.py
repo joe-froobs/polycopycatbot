@@ -110,6 +110,8 @@ async def risk_page(request: Request):
         {
             "request": request,
             "paper_trading": config.paper_trading,
+            "account_balance_usd": int(config.account_balance_usd),
+            "max_position_pct": round(config.max_position_pct * 100, 1),
             "max_position_usd": int(config.max_position_usd),
             "max_concurrent_positions": config.max_concurrent_positions,
             "daily_loss_limit_usd": int(config.daily_loss_limit_usd),
@@ -126,6 +128,8 @@ async def risk_page(request: Request):
 async def risk_save(
     request: Request,
     paper_trading: str = Form(None),
+    account_balance_usd: str = Form("0"),
+    max_position_pct: str = Form("5"),
     max_position_usd: str = Form("50"),
     max_concurrent_positions: str = Form("10"),
     daily_loss_limit_usd: str = Form("100"),
@@ -147,6 +151,8 @@ async def risk_save(
             {
                 "request": request,
                 "paper_trading": paper_trading == "1",
+                "account_balance_usd": account_balance_usd,
+                "max_position_pct": max_position_pct,
                 "max_position_usd": max_position_usd,
                 "max_concurrent_positions": max_concurrent_positions,
                 "daily_loss_limit_usd": daily_loss_limit_usd,
@@ -159,8 +165,16 @@ async def risk_save(
             },
         )
 
+    # Convert percentage input (e.g. "5") to decimal (0.05)
+    try:
+        pct_decimal = str(float(max_position_pct) / 100.0)
+    except (ValueError, TypeError):
+        pct_decimal = "0.05"
+
     settings = {
         "paper_trading": "true" if paper_trading == "1" else "false",
+        "account_balance_usd": account_balance_usd,
+        "max_position_pct": pct_decimal,
         "max_position_usd": max_position_usd,
         "max_concurrent_positions": max_concurrent_positions,
         "daily_loss_limit_usd": daily_loss_limit_usd,
