@@ -215,13 +215,22 @@ class RedemptionService:
     # Redemption
     # ------------------------------------------------------------------
 
-    async def redeem(self, condition_id: str) -> dict:
-        """Redeem resolved conditional tokens for a given condition ID."""
+    async def batch_redeem(self, condition_ids: list[str]) -> dict:
+        """Batch-redeem multiple resolved conditions in a single relayer transaction.
+
+        Uses Gnosis Safe multiSend to combine all redemptions into one tx,
+        consuming only 1 daily quota slot regardless of how many conditions.
+        """
         if not self.is_configured:
             return {"success": False, "error": "Builder credentials not configured"}
 
-        if condition_id in self._redeemed_conditions:
-            return {"success": True, "note": "Already redeemed this session"}
+        # Filter out already-redeemed
+        to_redeem = [
+            cid for cid in condition_ids
+            if cid not in self._redeemed_conditions
+        ]
+        if not to_redeem:
+            return {"success": True, "redeemed": [], "note": "All already redeemed"}
 
         allowed, reason = self._check_quota()
         if not allowed:
@@ -229,26 +238,34 @@ class RedemptionService:
 
         try:
             client = self._get_relay_client()
-            calldata = self._encode_redeem_calldata(condition_id)
 
-            safe_txn = SafeTransaction(
-                to=CTF_ADDRESS,
-                operation=OperationType.Call,
-                data=calldata,
-                value="0",
-            )
+            # Build one SafeTransaction per condition, all in one batch
+            safe_txns = []
+            for cid in to_redeem:
+                calldata = self._encode_redeem_calldata(cid)
+                safe_txns.append(SafeTransaction(
+                    to=CTF_ADDRESS,
+                    operation=OperationType.Call,
+                    data=calldata,
+                    value="0",
+                ))
+
+            print(f"[AutoClaim] Submitting batch of {len(safe_txns)} redemptions...")
 
             result = await asyncio.to_thread(
-                client.execute, [safe_txn], "Redeem resolved position"
+                client.execute, safe_txns,
+                f"Batch redeem {len(safe_txns)} positions",
             )
 
+            # Only 1 quota slot for the entire batch
             self._record_tx()
-            self._redeemed_conditions.add(condition_id)
+            for cid in to_redeem:
+                self._redeemed_conditions.add(cid)
 
             tx_id = result.transaction_id
             tx_hash = result.transaction_hash
 
-            print(f"[AutoClaim] Submitted redemption for {condition_id[:16]}.. tx={tx_hash}")
+            print(f"[AutoClaim] Batch submitted: {len(to_redeem)} conditions, tx={tx_hash}")
 
             # Poll for confirmation
             final = await asyncio.to_thread(
@@ -262,18 +279,18 @@ class RedemptionService:
 
             if final and final.get("state") in ("STATE_CONFIRMED", "STATE_MINED"):
                 confirmed_hash = final.get("transactionHash", tx_hash)
-                print(f"[AutoClaim] Confirmed: {condition_id[:16]}.. hash={confirmed_hash}")
-                return {"success": True, "tx_hash": confirmed_hash}
+                print(f"[AutoClaim] Batch confirmed: hash={confirmed_hash}")
+                return {"success": True, "tx_hash": confirmed_hash, "redeemed": to_redeem}
 
             if final and final.get("state") == "STATE_FAILED":
-                return {"success": False, "error": "Transaction failed on-chain"}
+                return {"success": False, "error": "Batch transaction failed on-chain"}
 
             # Submitted but couldn't confirm — count as success
-            return {"success": True, "tx_hash": tx_hash}
+            return {"success": True, "tx_hash": tx_hash, "redeemed": to_redeem}
 
         except Exception as e:
             error_msg = str(e)
-            print(f"[AutoClaim] Error redeeming {condition_id[:16]}...: {error_msg}")
+            print(f"[AutoClaim] Batch error: {error_msg}")
             if "429" in error_msg or "rate" in error_msg.lower():
                 self._handle_429(error_msg)
             return {"success": False, "error": error_msg}
@@ -325,31 +342,26 @@ class RedemptionService:
         if not orphan_cids:
             return []
 
-        # Deduplicate
-        orphan_cids = list(dict.fromkeys(orphan_cids))
+        # Deduplicate and cap how many we check per sweep
+        orphan_cids = list(dict.fromkeys(orphan_cids))[:DISCOVERY_MAX_PER_SWEEP]
         print(f"[AutoClaim] Found {len(orphan_cids)} orphan positions to check")
 
-        redeemed = []
+        # Check which orphans are resolved on-chain
+        resolved_orphans = []
         for cid in orphan_cids:
-            if len(redeemed) >= DISCOVERY_MAX_PER_SWEEP:
-                break
-
-            allowed, _ = self._check_quota()
-            if not allowed:
-                break
-
             numerators = await self.check_resolved(cid)
-            if numerators is None:
-                await asyncio.sleep(RPC_DELAY)
-                continue
-
-            result = await self.redeem(cid)
-            if result.get("success"):
-                redeemed.append(cid)
-
+            if numerators is not None:
+                resolved_orphans.append(cid)
             await asyncio.sleep(RPC_DELAY)
 
+        if not resolved_orphans:
+            return []
+
+        # Batch-redeem all resolved orphans in one tx
+        result = await self.batch_redeem(resolved_orphans)
+        redeemed = result.get("redeemed", []) if result.get("success") else []
+
         if redeemed:
-            print(f"[AutoClaim] Sweep complete: redeemed {len(redeemed)} orphans")
+            print(f"[AutoClaim] Orphan sweep: batch redeemed {len(redeemed)} in 1 tx")
 
         return redeemed

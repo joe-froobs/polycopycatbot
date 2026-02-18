@@ -8,9 +8,8 @@ from src.trade_executor import TradeExecutor
 from src.redemption_service import RedemptionService
 from src import db
 
-# How often to run resolution checks / discovery sweeps (in poll cycles)
-RESOLUTION_CHECK_INTERVAL = 60     # ~5 min at 5s poll interval
-DISCOVERY_SWEEP_INTERVAL = 360     # ~30 min at 5s poll interval
+# How often to run the claim sweep (in poll cycles)
+CLAIM_SWEEP_INTERVAL = 360  # ~30 min at 5s poll interval
 
 
 class BotRunner:
@@ -211,22 +210,14 @@ class BotRunner:
                         mode=self.mode,
                     )
 
-                # --- Auto-claim: check positions for resolution ---
+                # --- Auto-claim sweep every ~30 min ---
                 if (
                     self.redeemer
                     and self.redeemer.is_configured
-                    and self.poll_count % RESOLUTION_CHECK_INTERVAL == 0
-                ):
-                    await self._check_resolutions()
-
-                # --- Discovery sweep: find orphaned positions ---
-                if (
-                    self.redeemer
-                    and self.redeemer.is_configured
-                    and self.poll_count % DISCOVERY_SWEEP_INTERVAL == 0
+                    and self.poll_count % CLAIM_SWEEP_INTERVAL == 0
                     and self.poll_count > 0
                 ):
-                    await self._discovery_sweep()
+                    await self._claim_sweep()
 
             except asyncio.CancelledError:
                 break
@@ -235,65 +226,69 @@ class BotRunner:
                 await db.log_activity(event_type="error", details=str(e))
                 await asyncio.sleep(5)
 
-    async def _check_resolutions(self):
-        """Check all DB positions for on-chain resolution and auto-redeem."""
+    async def _claim_sweep(self):
+        """Single sweep: check all positions + orphans for resolution, batch-redeem.
+
+        Runs every ~30 min. Collects unique condition_ids, checks each on-chain,
+        then submits all resolved conditions in one batched relayer transaction.
+        """
         try:
             positions = await db.get_positions()
+
+            # Deduplicate: multiple positions may share a condition_id
+            cid_to_positions: dict[str, list[dict]] = {}
             for pos in positions:
                 cid = pos.get("condition_id", "")
-                if not cid:
-                    continue
+                if cid and cid not in self.redeemer._redeemed_conditions:
+                    cid_to_positions.setdefault(cid, []).append(pos)
 
+            # Check each unique condition_id on-chain
+            resolved_cids: list[str] = []
+            checked = 0
+            for cid in cid_to_positions:
                 numerators = await self.redeemer.check_resolved(cid)
-                if numerators is None:
-                    await asyncio.sleep(1.0)
-                    continue
+                checked += 1
+                if numerators is not None:
+                    resolved_cids.append(cid)
+                await asyncio.sleep(2.0)  # gentle on the RPC
 
-                # Resolved — attempt redemption
-                result = await self.redeemer.redeem(cid)
+            if resolved_cids:
+                print(f"[AutoClaim] {len(resolved_cids)} resolved out of {checked} checked")
+
+            # Batch-redeem all resolved conditions in one relayer tx
+            if resolved_cids:
+                result = await self.redeemer.batch_redeem(resolved_cids)
                 if result.get("success"):
-                    await db.log_activity(
-                        event_type="auto_claim",
-                        market_id=pos["market_id"],
-                        outcome=pos.get("outcome", ""),
-                        size_usd=pos.get("size_usd", 0),
-                        mode=self.mode,
-                        details=f"Claimed via relayer tx={result.get('tx_hash', '')}",
-                    )
-                    await db.remove_position(pos["market_id"])
-                    self.executor.open_positions.pop(pos["market_id"], None)
+                    tx_hash = result.get("tx_hash", "")
+                    for cid in result.get("redeemed", resolved_cids):
+                        for pos in cid_to_positions.get(cid, []):
+                            await db.log_activity(
+                                event_type="auto_claim",
+                                market_id=pos["market_id"],
+                                outcome=pos.get("outcome", ""),
+                                size_usd=pos.get("size_usd", 0),
+                                mode=self.mode,
+                                details=f"Batch claimed tx={tx_hash}",
+                            )
+                            await db.remove_position(pos["market_id"])
+                            self.executor.open_positions.pop(pos["market_id"], None)
                     print(
-                        f"[AutoClaim] Claimed {pos.get('outcome', '?')} on "
-                        f"{pos['market_id'][:12]}.. (${pos.get('size_usd', 0):.2f})"
+                        f"[AutoClaim] Batch redeemed {len(result.get('redeemed', resolved_cids))} "
+                        f"conditions in 1 tx"
                     )
-                else:
-                    error = result.get("error", "")
-                    if "Quota" in error:
-                        break  # Stop checking — quota exhausted
 
-                await asyncio.sleep(1.0)
-
-        except Exception as e:
-            print(f"[AutoClaim] Resolution check error: {e}")
-
-    async def _discovery_sweep(self):
-        """Find and redeem orphaned wallet positions not tracked in DB."""
-        try:
-            positions = await db.get_positions()
-            known_cids = {
-                p.get("condition_id", "") for p in positions if p.get("condition_id")
-            }
-
-            redeemed = await self.redeemer.discover_and_redeem_orphans(known_cids)
-            for cid in redeemed:
+            # Discovery: check for orphaned wallet positions not in DB
+            known_cids = set(cid_to_positions.keys()) | self.redeemer._redeemed_conditions
+            orphan_redeemed = await self.redeemer.discover_and_redeem_orphans(known_cids)
+            for cid in orphan_redeemed:
                 await db.log_activity(
                     event_type="auto_claim",
-                    details=f"Orphan discovery: claimed condition {cid[:16]}...",
+                    details=f"Orphan claimed: {cid[:16]}...",
                     mode=self.mode,
                 )
 
         except Exception as e:
-            print(f"[AutoClaim] Discovery sweep error: {e}")
+            print(f"[AutoClaim] Sweep error: {e}")
 
     async def get_stats(self) -> dict:
         positions = await db.get_positions()
