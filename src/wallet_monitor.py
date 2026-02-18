@@ -15,6 +15,7 @@ class Position:
         size: float,
         price: float,
         trader: str,
+        condition_id: str = "",
     ):
         self.market_id = market_id
         self.token_id = token_id
@@ -22,6 +23,7 @@ class Position:
         self.size = size
         self.price = price
         self.trader = trader
+        self.condition_id = condition_id
 
     def __repr__(self):
         return (
@@ -65,6 +67,7 @@ class WalletMonitor:
                 outcome = p.get("outcome", "")
                 price = float(p.get("avgPrice", 0) or p.get("entry_price", 0) or 0)
                 token_id = p.get("asset", "") or p.get("tokenId", "")
+                condition_id = p.get("conditionId", "")
 
                 positions[market_id] = Position(
                     market_id=market_id,
@@ -73,6 +76,7 @@ class WalletMonitor:
                     size=size,
                     price=price,
                     trader=address,
+                    condition_id=condition_id,
                 )
 
             return positions

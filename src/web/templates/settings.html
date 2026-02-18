@@ -73,6 +73,25 @@
         </article>
     </details>
 
+    <details>
+        <summary>Auto-Claim Settings (optional)</summary>
+        <article>
+            <p><small>Enter your Polymarket Builder API credentials to automatically claim winnings when markets resolve. Leave blank to claim manually on polymarket.com.</small></p>
+            <label>
+                Builder API Key
+                <input type="password" name="builder_api_key" value="{{ config.builder_api_key }}" placeholder="Builder API key">
+            </label>
+            <label>
+                Builder API Secret
+                <input type="password" name="builder_api_secret" value="{{ config.builder_api_secret }}" placeholder="Builder API secret">
+            </label>
+            <label>
+                Builder API Passphrase
+                <input type="password" name="builder_api_passphrase" value="{{ config.builder_api_passphrase }}" placeholder="Builder API passphrase">
+            </label>
+        </article>
+    </details>
+
     <button type="submit">Save Settings</button>
 </form>
 {% endblock %}

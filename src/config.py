@@ -18,6 +18,9 @@ _SETTING_MAP = {
     "max_concurrent_positions": ("max_concurrent_positions", int),
     "daily_loss_limit_usd": ("daily_loss_limit_usd", float),
     "capital_ratio": ("capital_ratio", float),
+    "builder_api_key": ("builder_api_key", str),
+    "builder_api_secret": ("builder_api_secret", str),
+    "builder_api_passphrase": ("builder_api_passphrase", str),
 }
 
 
@@ -42,6 +45,11 @@ class Config:
     max_concurrent_positions: int = int(os.getenv("MAX_CONCURRENT_POSITIONS", "10"))
     daily_loss_limit_usd: float = float(os.getenv("DAILY_LOSS_LIMIT_USD", "100"))
     capital_ratio: float = float(os.getenv("CAPITAL_RATIO", "10.0"))
+
+    # Builder Relayer credentials (required for auto-claim)
+    builder_api_key: str = os.getenv("BUILDER_API_KEY", "")
+    builder_api_secret: str = os.getenv("BUILDER_API_SECRET", "")
+    builder_api_passphrase: str = os.getenv("BUILDER_API_PASSPHRASE", "")
 
     # Manual trader addresses (comma-separated, fallback if no API key)
     manual_traders: list[str] = field(default_factory=list)

@@ -82,6 +82,9 @@ async def settings_save(
     private_key: str = Form(""),
     funder: str = Form(""),
     rpc_url: str = Form("https://polygon-rpc.com"),
+    builder_api_key: str = Form(""),
+    builder_api_secret: str = Form(""),
+    builder_api_passphrase: str = Form(""),
 ):
     # Validate numeric inputs
     validation_errors = _validate_settings(
@@ -113,6 +116,9 @@ async def settings_save(
         "private_key": private_key.strip(),
         "funder": funder.strip(),
         "rpc_url": rpc_url.strip(),
+        "builder_api_key": builder_api_key.strip(),
+        "builder_api_secret": builder_api_secret.strip(),
+        "builder_api_passphrase": builder_api_passphrase.strip(),
     }
     await db.save_settings(settings)
 

@@ -33,14 +33,15 @@ CREATE TABLE IF NOT EXISTS activity_log (
 );
 
 CREATE TABLE IF NOT EXISTS positions (
-    market_id   TEXT PRIMARY KEY,
-    token_id    TEXT DEFAULT '',
-    outcome     TEXT DEFAULT '',
-    size_usd    REAL DEFAULT 0,
-    entry_price REAL DEFAULT 0,
-    trader      TEXT DEFAULT '',
-    opened_at   TEXT DEFAULT (datetime('now')),
-    mode        TEXT DEFAULT 'paper'
+    market_id    TEXT PRIMARY KEY,
+    token_id     TEXT DEFAULT '',
+    condition_id TEXT DEFAULT '',
+    outcome      TEXT DEFAULT '',
+    size_usd     REAL DEFAULT 0,
+    entry_price  REAL DEFAULT 0,
+    trader       TEXT DEFAULT '',
+    opened_at    TEXT DEFAULT (datetime('now')),
+    mode         TEXT DEFAULT 'paper'
 );
 
 CREATE TABLE IF NOT EXISTS onboarding (
@@ -65,6 +66,13 @@ async def init_db(path: Path | None = None) -> None:
         await db.execute(
             "INSERT OR IGNORE INTO onboarding (id) VALUES (1)"
         )
+        # Migration: add condition_id column if upgrading from older schema
+        try:
+            await db.execute(
+                "ALTER TABLE positions ADD COLUMN condition_id TEXT DEFAULT ''"
+            )
+        except Exception:
+            pass  # column already exists
         await db.commit()
 
 
@@ -221,6 +229,7 @@ async def get_activity(limit: int = 50) -> list[dict]:
 async def upsert_position(
     market_id: str,
     token_id: str = "",
+    condition_id: str = "",
     outcome: str = "",
     size_usd: float = 0,
     entry_price: float = 0,
@@ -229,11 +238,13 @@ async def upsert_position(
 ) -> None:
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
-            "INSERT INTO positions (market_id, token_id, outcome, size_usd, "
-            "entry_price, trader, mode) VALUES (?, ?, ?, ?, ?, ?, ?) "
+            "INSERT INTO positions (market_id, token_id, condition_id, outcome, "
+            "size_usd, entry_price, trader, mode) VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
             "ON CONFLICT(market_id) DO UPDATE SET "
-            "size_usd = excluded.size_usd, entry_price = excluded.entry_price",
-            (market_id, token_id, outcome, size_usd, entry_price, trader, mode),
+            "size_usd = excluded.size_usd, entry_price = excluded.entry_price, "
+            "condition_id = CASE WHEN excluded.condition_id != '' "
+            "THEN excluded.condition_id ELSE positions.condition_id END",
+            (market_id, token_id, condition_id, outcome, size_usd, entry_price, trader, mode),
         )
         await db.commit()
 
