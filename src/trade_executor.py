@@ -45,15 +45,19 @@ class TradeExecutor:
             self.reset_daily_pnl()
             self._last_reset_date = today
 
-        # Scale down by capital ratio
-        raw_size = trader_position.size / self.config.capital_ratio
+        balance = self.config.account_balance_usd
 
-        # Dynamic max: percentage of account balance if set, else static cap
-        if self.config.account_balance_usd > 0:
-            max_size = self.config.account_balance_usd * self.config.max_position_pct
+        if balance > 0:
+            # Percentage-based sizing: mirror the trader's capital allocation
+            # If trader puts X% of their capital in, we put X% of ours
+            ratio = balance / max(self.config.trader_capital_estimate, 1.0)
+            raw_size = trader_position.size * ratio
+            max_size = balance * self.config.max_position_pct
+            size = min(raw_size, max_size)
         else:
-            max_size = self.config.max_position_usd
-        size = min(raw_size, max_size)
+            # Fallback: static ratio + dollar cap (legacy / no balance set)
+            raw_size = trader_position.size / self.config.capital_ratio
+            size = min(raw_size, self.config.max_position_usd)
 
         # Enforce minimum $1 position
         if size < 1.0:
@@ -64,9 +68,13 @@ class TradeExecutor:
             print(f"[Executor] Max concurrent positions ({self.config.max_concurrent_positions}) reached, skipping")
             return 0
 
-        # Check daily loss limit
-        if self.daily_pnl <= -self.config.daily_loss_limit_usd:
-            print(f"[Executor] Daily loss limit (${self.config.daily_loss_limit_usd}) reached, skipping")
+        # Check daily loss limit (percentage-based when balance is set)
+        if balance > 0:
+            loss_limit = balance * self.config.daily_loss_limit_pct
+        else:
+            loss_limit = self.config.daily_loss_limit_usd
+        if self.daily_pnl <= -loss_limit:
+            print(f"[Executor] Daily loss limit (${loss_limit:.0f}) reached, skipping")
             return 0
 
         return round(size, 2)

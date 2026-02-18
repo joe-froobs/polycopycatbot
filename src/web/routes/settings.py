@@ -75,7 +75,9 @@ async def settings_save(
     api_key: str = Form(""),
     paper_trading: str = Form(None),
     account_balance_usd: str = Form("0"),
+    trader_capital_estimate: str = Form("100000"),
     max_position_pct: str = Form("5"),
+    daily_loss_limit_pct: str = Form("10"),
     max_position_usd: str = Form("50"),
     max_concurrent_positions: str = Form("10"),
     daily_loss_limit_usd: str = Form("100"),
@@ -107,17 +109,23 @@ async def settings_save(
             },
         )
 
-    # Convert percentage input (e.g. "5") to decimal (0.05)
+    # Convert percentage inputs (e.g. "5") to decimal (0.05)
     try:
-        pct_decimal = str(float(max_position_pct) / 100.0)
+        pos_pct_decimal = str(float(max_position_pct) / 100.0)
     except (ValueError, TypeError):
-        pct_decimal = "0.05"
+        pos_pct_decimal = "0.05"
+    try:
+        loss_pct_decimal = str(float(daily_loss_limit_pct) / 100.0)
+    except (ValueError, TypeError):
+        loss_pct_decimal = "0.10"
 
     settings = {
         "api_key": api_key.strip(),
         "paper_trading": "true" if paper_trading == "1" else "false",
         "account_balance_usd": account_balance_usd,
-        "max_position_pct": pct_decimal,
+        "trader_capital_estimate": trader_capital_estimate,
+        "max_position_pct": pos_pct_decimal,
+        "daily_loss_limit_pct": loss_pct_decimal,
         "max_position_usd": max_position_usd,
         "max_concurrent_positions": max_concurrent_positions,
         "daily_loss_limit_usd": daily_loss_limit_usd,

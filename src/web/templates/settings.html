@@ -29,16 +29,28 @@
 
     <article>
         <header><strong>Capital & Sizing</strong></header>
-        <p><small>Set your USDC account balance so position sizes scale proportionally. If blank, the static "Max Position Size" cap is used instead.</small></p>
+        <p><small>Set your USDC balance so all trade sizes and limits scale proportionally. When set, the bot mirrors the trader's capital allocation at your scale.</small></p>
         <div class="grid">
             <label>
                 Account Balance ($)
                 <input type="number" name="account_balance_usd" value="{{ config.account_balance_usd|int }}" min="0" step="1" placeholder="e.g. 5000">
             </label>
             <label>
-                Max Position % of Balance
+                Est. Trader Capital ($)
+                <input type="number" name="trader_capital_estimate" value="{{ config.trader_capital_estimate|int }}" min="1000" step="1000">
+                <small>Avg capital of traders you copy (default $100k)</small>
+            </label>
+        </div>
+        <div class="grid">
+            <label>
+                Max Position (% of balance)
                 <input type="number" name="max_position_pct" value="{{ (config.max_position_pct * 100)|round(1) }}" min="1" max="50" step="0.5">
-                <small>% per trade (default 5%)</small>
+                <small>Per trade cap (default 5%)</small>
+            </label>
+            <label>
+                Daily Loss Limit (% of balance)
+                <input type="number" name="daily_loss_limit_pct" value="{{ (config.daily_loss_limit_pct * 100)|round(1) }}" min="1" max="50" step="0.5">
+                <small>Pause trading if hit (default 10%)</small>
             </label>
         </div>
     </article>

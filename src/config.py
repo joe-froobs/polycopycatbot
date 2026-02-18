@@ -15,7 +15,9 @@ _SETTING_MAP = {
     "max_traders": ("max_traders", int),
     "poll_interval": ("poll_interval", int),
     "account_balance_usd": ("account_balance_usd", float),
+    "trader_capital_estimate": ("trader_capital_estimate", float),
     "max_position_pct": ("max_position_pct", float),
+    "daily_loss_limit_pct": ("daily_loss_limit_pct", float),
     "max_position_usd": ("max_position_usd", float),
     "max_concurrent_positions": ("max_concurrent_positions", int),
     "daily_loss_limit_usd": ("daily_loss_limit_usd", float),
@@ -42,11 +44,13 @@ class Config:
     max_traders: int = int(os.getenv("MAX_TRADERS", "5"))
     poll_interval: int = int(os.getenv("POLL_INTERVAL", "5"))
 
-    # Capital & sizing
+    # Capital & sizing (percentage-based when account_balance is set)
     account_balance_usd: float = float(os.getenv("ACCOUNT_BALANCE_USD", "0"))
+    trader_capital_estimate: float = float(os.getenv("TRADER_CAPITAL_ESTIMATE", "100000"))
     max_position_pct: float = float(os.getenv("MAX_POSITION_PCT", "0.05"))
+    daily_loss_limit_pct: float = float(os.getenv("DAILY_LOSS_LIMIT_PCT", "0.10"))
 
-    # Risk controls
+    # Risk controls (fixed-dollar fallbacks when account_balance is 0)
     max_position_usd: float = float(os.getenv("MAX_POSITION_USD", "50"))
     max_concurrent_positions: int = int(os.getenv("MAX_CONCURRENT_POSITIONS", "10"))
     daily_loss_limit_usd: float = float(os.getenv("DAILY_LOSS_LIMIT_USD", "100"))
@@ -85,8 +89,12 @@ class Config:
             errors.append("capital_ratio must be >= 1.0")
         if self.account_balance_usd < 0:
             errors.append("account_balance_usd must be >= 0")
+        if self.trader_capital_estimate < 1000:
+            errors.append("trader_capital_estimate must be >= 1000")
         if self.max_position_pct <= 0 or self.max_position_pct > 1.0:
             errors.append("max_position_pct must be between 0 and 1")
+        if self.daily_loss_limit_pct <= 0 or self.daily_loss_limit_pct > 1.0:
+            errors.append("daily_loss_limit_pct must be between 0 and 1")
         return errors
 
     @classmethod

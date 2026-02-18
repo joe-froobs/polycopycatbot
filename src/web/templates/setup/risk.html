@@ -24,16 +24,28 @@
 
         <fieldset>
             <legend><strong>Account Size</strong></legend>
-            <p><small>Enter your USDC balance so trade sizes scale to your account. Position sizes are calculated as a percentage of this balance.</small></p>
+            <p><small>Enter your USDC balance so all trade sizes and risk limits scale proportionally to your capital.</small></p>
             <div class="grid">
                 <label>
                     Account Balance ($)
                     <input type="number" name="account_balance_usd" value="{{ account_balance_usd }}" min="0" step="1" placeholder="e.g. 5000">
                 </label>
                 <label>
-                    Max Position % of Balance
-                    <input type="number" name="max_position_pct" value="{{ max_position_pct }}" min="1" max="50" step="0.5" value="5">
-                    <small>% per trade (default 5%)</small>
+                    Est. Trader Capital ($)
+                    <input type="number" name="trader_capital_estimate" value="{{ trader_capital_estimate }}" min="1000" step="1000">
+                    <small>Avg capital of traders you copy (default $100k)</small>
+                </label>
+            </div>
+            <div class="grid">
+                <label>
+                    Max Position (% of balance)
+                    <input type="number" name="max_position_pct" value="{{ max_position_pct }}" min="1" max="50" step="0.5">
+                    <small>Per trade cap (default 5%)</small>
+                </label>
+                <label>
+                    Daily Loss Limit (% of balance)
+                    <input type="number" name="daily_loss_limit_pct" value="{{ daily_loss_limit_pct }}" min="1" max="50" step="0.5">
+                    <small>Pause trading if hit (default 10%)</small>
                 </label>
             </div>
         </fieldset>
